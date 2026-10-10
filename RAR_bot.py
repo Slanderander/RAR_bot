@@ -38,16 +38,16 @@ if not fund:
 pladser = int(fund.group(1))
 print(f"Ledige startpladser: {pladser}")
 
-if pladser >= 0:
+if pladser == 0:
     if not GMAIL or not APP_PASSWORD:
-        print("Der er pladser! (Gmail er ikke sat op, så ingen e-mail sendt)")
+        print("Lortet virker ikke")
         sys.exit(0)
 
     mail = EmailMessage()
     mail["Subject"] = f"RAD AM RING: {pladser} ledige startplads(er)!"
     mail["From"] = GMAIL
     mail["To"] = MODTAGERE
-    mail.set_content(f"Der er {pladser} ledige startpladser. Skynd dig:\n\n{URL}")
+    mail.set_content(f"Der er {pladser} ledige startpladser. Let måsen:\n\n{URL}\n\n""ps Glade er sikkert fuld lige")
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(GMAIL, APP_PASSWORD)
