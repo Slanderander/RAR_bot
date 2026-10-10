@@ -44,7 +44,7 @@ if pladser == 0:
         sys.exit(0)
 
     mail = EmailMessage()
-    mail["Subject"] = f"RAD AM RING: {pladser} ledige startplads(er)!"
+    mail["Subject"] = f"RAD AM RING: {pladser} ledige startpladser!"
     mail["From"] = GMAIL
     mail["To"] = MODTAGERE
     mail.set_content(f"Der er {pladser} ledige startpladser. Let måsen:\n\n{URL}\n\n""ps Glade er sikkert fuld lige")
