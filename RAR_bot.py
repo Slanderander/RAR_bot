@@ -82,7 +82,7 @@ try:
 except requests.RequestException as fejl:
     print(f"Kunne ikke hente siden: {fejl}")
     opdater_alarm("nede", f"Fejl: {fejl}")
-    sys.exit(1)
+    sys.exit(0)
 
 tekst = BeautifulSoup(svar.text, "html.parser").get_text(" ", strip=True)
 
@@ -92,7 +92,7 @@ if not fund:
     print("Kunne ikke finde antallet af startpladser. Sidens tekst starter med:")
     print(tekst[:1500])
     opdater_alarm("layout", tekst[:1500])
-    sys.exit(1)
+    sys.exit(0)
 
 pladser = int(fund.group(1))
 print(f"Ledige startpladser: {pladser}")
