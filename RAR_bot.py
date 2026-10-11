@@ -38,7 +38,7 @@ if not fund:
 pladser = int(fund.group(1))
 print(f"Ledige startpladser: {pladser}")
 
-if pladser = 0:
+if pladser == 0:
     if not GMAIL or not APP_PASSWORD:
         print("Lortet virker ikke")
         sys.exit(0)
