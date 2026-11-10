@@ -21,7 +21,9 @@ jobs:
       - run: pip install requests beautifulsoup4
       - uses: actions/cache/restore@v4
         with:
-          path: status.txt
+          path: |
+            status.txt
+            boerse.txt
           key: rar-status-${{ github.run_id }}
           restore-keys: rar-status-
       - run: python RAR_bot.py
@@ -31,7 +33,9 @@ jobs:
           MODTAGERE: ${{ secrets.MODTAGERE }}
           ALARM_MODTAGER: ${{ secrets.ALARM_MODTAGER }}
       - uses: actions/cache/save@v4
-        if: always() && hashFiles('status.txt') != ''
+        if: always() && hashFiles('status.txt', 'boerse.txt') != ''
         with:
-          path: status.txt
+          path: |
+            status.txt
+            boerse.txt
           key: rar-status-${{ github.run_id }}

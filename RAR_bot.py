@@ -21,6 +21,8 @@ ALARM_MODTAGER = os.environ.get("ALARM_MODTAGER")
 # Seneste status: "ok" eller de sider der fejler, fx "Oversigt:layout".
 # Gemmes mellem kørsler via actions/cache, så der kun sendes én alarm pr. nedbrud.
 STATUS_FIL = "status.txt"
+# "aaben" eller "lukket" for 4er-börsen, så alle kun får én mail når den åbner
+BOERSE_FIL = "boerse.txt"
 
 headers = {
     "User-Agent": "Mozilla/5.0 (personligt startplads-tjek)",
@@ -63,12 +65,12 @@ def send_mail(modtager, emne, indhold):
         server.send_message(mail)
 
 
-def laes_status():
+def laes_status(filnavn=STATUS_FIL, standard="ok"):
     try:
-        with open(STATUS_FIL) as fil:
-            return fil.read().strip() or "ok"
+        with open(filnavn) as fil:
+            return fil.read().strip() or standard
     except FileNotFoundError:
-        return "ok"
+        return standard
 
 
 def opdater_alarm(problemer):
@@ -115,6 +117,35 @@ def hent_tekst(url):
     return BeautifulSoup(svar.content, "html.parser")
 
 
+def opdater_boerse(aaben):
+    """Sender én mail til alle, når 4er-börsen går fra lukket til åben.
+    aaben er None, hvis det ikke kunne afgøres, og så huskes den gamle status."""
+    if aaben is None:
+        return
+    status = "aaben" if aaben else "lukket"
+    if status == laes_status(BOERSE_FIL, "lukket"):
+        return
+
+    if aaben:
+        if not GMAIL or not APP_PASSWORD:
+            print("Mangler GMAIL_ADDRESS eller GMAIL_APP_PASSWORD. Ingen börse-mail sendt.")
+            return
+        send_mail(
+            MODTAGERE,
+            "RAD AM RING: startplatzbörsen for 4er-Team er åben!",
+            f"Startplatzbörsen for 4er-Team er åben igen. Hold øje med den:\n\n{BOERSE_URL}",
+        )
+        print("Börse-mail sendt")
+
+    # Gemmes først når mailen er sendt, så næste kørsel prøver igen hvis den fejler
+    with open(BOERSE_FIL, "w") as fil:
+        fil.write(status)
+
+
+# Om 4er-börsen ser åben ud, pr. side der kan afgøre det (True/False).
+# Fejler en side, mangler den her, og så ved vi det ikke.
+boerse_aaben = {}
+
 # Hver tjek-funktion returnerer kun None, når det er bekræftet at der ingen
 # ledige pladser er, og ellers en kort tekst om hvad den fandt. Kan siden ikke
 # læses, kastes SideFejl, med maaske_plads=True hvis det kan skyldes en ledig plads.
@@ -158,6 +189,12 @@ def tjek_oversigt():
     if len(blokke) != 1:
         raise SideFejl("layout", side.get_text(" ", strip=True)[:1500])
 
+    # Åbne börser har et "Startplatzbörse ››"-link i løbets blok, ligesom de andre løb
+    boerse_aaben["Oversigt"] = any(
+        "/boerse/" in link.get("href", "") or re.search(r"startplatzb.rse", link.get_text(), re.IGNORECASE)
+        for link in blokke[0].find_all("a")
+    )
+
     tekst = blokke[0].get_text(" ", strip=True)
     fund = FRIE_PLADSER.findall(tekst)
 
@@ -176,9 +213,11 @@ def tjek_boerse():
     except SideFejl as fejl:
         # Når börsen er lukket, sender datasport videre til oversigten. Det er normalt.
         if fejl.type == "omdirigeret":
+            boerse_aaben["Startplatzbörse"] = False
             return None
         raise
 
+    boerse_aaben["Startplatzbörse"] = True
     har_overskrift = tjek_overskrift(tekst, "startplatzb.rse")
 
     if har_overskrift and re.search(r"aktuell\s+kein\s+platz\s+verf.gbar", tekst, re.IGNORECASE):
@@ -211,6 +250,14 @@ for navn, url, tjek in SIDER:
     print(f"{navn}: {resultat or 'ingen ledige pladser'}")
     if resultat:
         fund.append((navn, url, resultat))
+
+# Åben, hvis bare én side siger det. Lukket kun, hvis begge sider kunne læses.
+if any(boerse_aaben.values()):
+    opdater_boerse(True)
+elif len(boerse_aaben) == 2:
+    opdater_boerse(False)
+else:
+    opdater_boerse(None)
 
 if fund:
     if not GMAIL or not APP_PASSWORD:
